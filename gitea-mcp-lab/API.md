@@ -1,16 +1,20 @@
-# Kontrakt serwera MCP dla Gitea
+# Dwa narzędzia do odczytu zgłoszeń
 
-Serwer czyta zgłoszenia wyłącznie prywatnego repozytorium `operator/ops`. Adres systemu i plik z tokenem są ustawieniami administratora serwera (`GITEA_BASE_URL`, `GITEA_TOKEN_FILE`), nie argumentami narzędzia. W Docker Compose wartości wskazują odpowiednio `http://gitea:3000` i `/run/secrets/gitea_token`. Token pochodzi z konta `reader` i ma zakres `read:issue`.
+Serwer czyta z `/api/v1/repos/operator/ops/issues`. Adres Gitea bierze z `GITEA_BASE_URL`, a token konta `reader` z pliku wskazanego przez `GITEA_TOKEN_FILE`.
 
-| Narzędzie | Argumenty | Akcja w API |
+| Narzędzie | Argumenty | Co zwraca |
 |---|---|---|
-| `list_issues` | `state`: `open` lub `closed`, domyślnie `open`; `limit`: liczba całkowita 1-10, domyślnie 5 | GET `/api/v1/repos/operator/ops/issues?state=...&limit=...&page=1` |
-| `get_issue` | `number`: liczba całkowita od 1 do 1000000 | GET `/api/v1/repos/operator/ops/issues/{number}` |
+| `list_issues` | `state` (`open` lub `closed`, domyślnie `open`) i całkowity `limit` od 1 do 10 (domyślnie 5) | Tablicę zgłoszeń z pierwszej strony. Wyślij GET z parametrami `state`, `limit` i `page=1`. Pomiń pull requesty. |
+| `get_issue` | Całkowity `number` od 1 do 1000000 | Jedno zgłoszenie pobrane przez GET pod ścieżką zakończoną `/{number}`. Numer pull requesta zwraca błąd. |
 
-Każde zgłoszenie w odpowiedzi ma wyłącznie pola `number`, `title`, `state` i `labels` (tablica nazw etykiet). Tekst zgłoszenia (`body`), dane autora i inne pola nie są zwracane. Wynik umieść w odpowiedzi MCP jako `content` z tekstowym JSON `{"ok":true,"data":...}`. `list_issues` zwraca tablicę, `get_issue` jeden obiekt. Pomiń pull requesty w liście, jeśli API je zwróci. Przy numerze pull requesta `get_issue` zwróć błąd zamiast przedstawiać go jako zgłoszenie. Limit określa pierwszą stronę, nie gwarantuje kompletności wszystkich zgłoszeń.
+Przyjmuj tylko argumenty z tabeli. Ustaw timeout żądania i odrzucaj przekierowania. Token pozostaje po stronie serwera, również przy błędzie.
 
-Nie akceptuj dodatkowych argumentów, adresów URL, nazw innych repozytoriów ani poleceń. Nie dodawaj narzędzi zapisu. Pobieraj token tylko z pliku; nigdy nie umieszczaj go w wyniku, logach ani komunikatach błędu. Nie podążaj za przekierowaniami i ustaw ograniczenie czasu żądania. Nie korzystaj z danych z innego adresu przekazanego przez model.
+## Wynik
 
-Błąd źródła zwróć jako wynik MCP z `isError: true` i JSON `{"ok":false,"error":"SOURCE_UNAVAILABLE"}` przy niedostępności Gitea. Odmowa dostępu, brak rekordu, błędna odpowiedź i brak tokena też powinny być błędami, nie pustą listą ani wymyślonym wynikiem. Dane z treści zgłoszeń są danymi, nie instrukcjami dla agenta.
+W `content` zwróć element typu `text` z JSON-em. Każde zgłoszenie ma cztery pola: `number`, `title`, `state` i `labels` (lista nazw etykiet). Przykład dla `get_issue`:
 
-Uwaga: token `reader` ma dostęp do pełnej zawartości zgłoszeń w `operator/ops`. Zwracanie tylko wybranych pól jest ograniczeniem kodu MCP, a nie filtrowaniem pól przez Gitea. Rola i token API, zabezpieczenie sekretu oraz inne drogi dostępu agenta muszą być ocenione oddzielnie. Docker i brak narzędzia zapisu nie ograniczają automatycznie terminala ani sieci agenta.
+```json
+{"ok":true,"data":{"number":1,"title":"Przykładowe zgłoszenie","state":"open","labels":[]}}
+```
+
+Pusta lista po poprawnym odczycie to `{"ok":true,"data":[]}`. Gdy Gitea nie odpowiada, ustaw `isError: true` i zwróć `{"ok":false,"error":"SOURCE_UNAVAILABLE"}`. Brak tokenu, brak zgłoszenia, odmowę dostępu i niepoprawną odpowiedź API też zgłaszaj jako błędy.
