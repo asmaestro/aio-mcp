@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, symlink, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+
+const hook = resolve('hooks/protect-token.mjs');
+const root = await mkdtemp(join(tmpdir(), 'aiops-hook-'));
+await mkdir(join(root, '.state'));
+await writeFile(join(root, '.state', 'reader-token'), 'fixture');
+await writeFile(join(root, '.state', 'operator-password'), 'fixture');
+await symlink(join(root, '.state', 'reader-token'), join(root, 'alias'));
+const call = value => spawnSync(process.execPath, [hook], { input: value, encoding: 'utf8', env: {...process.env, CLAUDE_PROJECT_DIR: root} });
+test('odrzuca edycję tokena', () => assert.equal(call(JSON.stringify({tool_name:'Edit',tool_input:{file_path:'.state/reader-token'}})).status,2));
+test('odrzuca zapis hasła operatora', () => assert.equal(call(JSON.stringify({tool_name:'Write',tool_input:{file_path:join(root,'.state','operator-password')}})).status,2));
+test('odrzuca edycję przez istniejący alias', () => assert.equal(call(JSON.stringify({tool_name:'Edit',tool_input:{file_path:'alias'}})).status,2));
+test('dopuszcza zmianę kodu', () => assert.equal(call(JSON.stringify({tool_name:'Edit',tool_input:{file_path:'src/my-server.mjs'}})).status,0));
+test('nie zatrzymuje Bash', () => assert.equal(call(JSON.stringify({tool_name:'Bash',tool_input:{command:'true'}})).status,0));
+test('błędny JSON zwraca błąd hooka', () => assert.equal(call('{').status,2));
+test.after(async () => { await rm(root,{recursive:true,force:true}); });

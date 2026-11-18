@@ -1,0 +1,16 @@
+{
+  "name": "ai-operators-mcp-security-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "demo": "node verify-security.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "jose": "6.2.14",
+    "zod": "4.6.7"
+  }
+}

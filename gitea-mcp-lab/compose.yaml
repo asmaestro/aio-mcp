@@ -1,0 +1,29 @@
+name: ${AI_OPS_PROJECT_NAME:?Uruchom najpierw node scripts/bootstrap.mjs}
+services:
+  gitea:
+    image: docker.gitea.com/gitea:28.2.0-rootless
+    environment:
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__server__DISABLE_SSH: "true"
+      GITEA__service__DISABLE_REGISTRATION: "true"
+    ports:
+      - "127.0.0.1::3000"
+    volumes:
+      - gitea-data:/var/lib/gitea
+      - gitea-config:/etc/gitea
+  mcp:
+    build: .
+    profiles: ["mcp"]
+    init: true
+    user: "${AI_OPS_CONTAINER_USER:?Uruchom najpierw node scripts/bootstrap.mjs}"
+    environment:
+      GITEA_BASE_URL: http://gitea:3000
+      GITEA_TOKEN_FILE: /run/secrets/gitea_token
+    volumes:
+      - ./src:/app/src:ro
+      - ./.state/reader-token:/run/secrets/gitea_token:ro
+    command: ["node", "src/my-server.mjs"]
+volumes:
+  gitea-data:
+  gitea-config:
