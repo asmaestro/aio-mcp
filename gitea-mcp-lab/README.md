@@ -1,6 +1,6 @@
 # Gitea i własny serwer MCP
 
-Polecenia wykonuj w `aio-mcp/gitea-mcp-lab`. Potrzebujesz Node.js 22 lub nowszego, Dockera z Compose i Claude Code. Na Windows użyj WSL z integracją Dockera.
+Polecenia wykonuj w `aio-mcp/gitea-mcp-lab`. Potrzebujesz Node.js 22 lub nowszego, Dockera z Compose i agenta z obsługą MCP przez stdio. Na Windows użyj WSL z integracją Dockera.
 
 ## 05B.01 · Uruchom Gitea
 
@@ -18,7 +18,7 @@ node scripts/check-access.mjs
 node --test test/hook.test.mjs
 ```
 
-Dla tokenu `reader` oczekuj kolejno: 200 dla zgłoszeń, 403 dla metadanych repozytorium, 404 dla prywatnego `restricted` i po 403 dla obu prób zapisu. Test samego hooka powinien zaliczyć 6 przypadków. Jego działanie w Claude Code sprawdź na pliku testowym z lekcji.
+Dla tokenu `reader` oczekuj kolejno: 200 dla zgłoszeń, 403 dla metadanych repozytorium, 404 dla prywatnego `restricted` i po 403 dla obu prób zapisu. Test samego hooka powinien zaliczyć 6 przypadków. W lekcji znajdziesz też opcjonalny przykład rejestracji hooka w Claude Code.
 
 ## 05B.03 · Sprawdź swój serwer
 
@@ -31,12 +31,8 @@ docker compose --profile mcp run --rm -T --entrypoint node mcp scripts/verify-st
 
 Tester powinien potwierdzić odczyt przez oba narzędzia, błąd przy niedostępnym API i uprawnienia tokenu. Gotowy przykład znajdziesz w `solution/server.mjs`.
 
-Dodaj serwer do Claude Code z tego samego katalogu:
+W swoim kliencie MCP dodaj serwer stdio o nazwie `gitea-issues`. Program to `docker`. Jako argumenty podaj kolejno `compose`, `--project-directory`, pełną ścieżkę do `gitea-mcp-lab`, `--profile`, `mcp`, `run`, `--rm`, `-T`, `mcp`. W 05B.03 znajdziesz gotowe konfiguracje dla Codexa, Cursora i Claude Code.
 
-```bash
-claude mcp add --transport stdio --scope local gitea-issues -- docker compose --profile mcp run --rm -T mcp
-```
-
-Otwórz nową sesję `claude`, sprawdź połączenie w `/mcp` i poproś o listę otwartych zgłoszeń. Numery i tytuły powinny zgadzać się z widokiem **Issues** w Gitea.
+Otwórz nową sesję w projekcie i poproś agenta o wywołanie `list_issues` dla otwartych zgłoszeń. Porównaj numery i tytuły z widokiem **Issues** w Gitea.
 
 Po pracy wpisz `docker compose stop`. Następnym razem uruchom `node scripts/bootstrap.mjs` w tym samym katalogu.

@@ -2,6 +2,8 @@ import { access, readFile } from 'node:fs/promises';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+
 const file = process.argv[2] || 'src/my-server.mjs';
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 await access(file).catch(() => { throw new Error('Brakuje pliku serwera. Utwórz src/my-server.mjs zgodnie z API.md.'); });
@@ -22,7 +24,13 @@ function exactFields(issue) {
   assert(Array.isArray(issue.labels) && issue.labels.every(x => typeof x === 'string'), 'Etykiety muszą być tablicą nazw.');
 }
 async function rejected(client, name, args) {
-  try { const res = await client.callTool({ name, arguments: args }); return res.isError === true; } catch { return true; }
+  try {
+    const result = await client.callTool({ name, arguments: args });
+    return result.isError === true;
+  } catch (error) {
+    if (error instanceof McpError && error.code === ErrorCode.InvalidParams) return true;
+    throw error;
+  }
 }
 const token = (await readFile(env.GITEA_TOKEN_FILE, 'utf8')).trim();
 assert(token.length > 0, 'Brak tokena konta reader.');

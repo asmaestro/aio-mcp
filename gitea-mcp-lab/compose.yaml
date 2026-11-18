@@ -1,7 +1,7 @@
 name: ${AI_OPS_PROJECT_NAME:?Uruchom najpierw node scripts/bootstrap.mjs}
 services:
   gitea:
-    image: docker.gitea.com/gitea:28.2.0-rootless
+    image: docker.gitea.com/gitea:28.4.0-rootless
     environment:
       GITEA__database__DB_TYPE: sqlite3
       GITEA__security__INSTALL_LOCK: "true"

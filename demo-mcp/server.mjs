@@ -25,7 +25,9 @@ export async function startServer({ publicKey, issuer, sourceUrl, sourceToken })
       return { token, clientId: payload.client_id, scopes: payload.scope.split(' '), expiresAt: payload.exp, resource: new URL(payload.aud), extra: { subject: payload.sub } };
     } catch { throw new InvalidTokenError('Token rejected'); }
   }};
-  app.post('/mcp', (req, res, next) => requireBearerAuth({ verifier, expectedResource: resource, requiredScopes: ['documents:read'], resourceMetadataUrl: metadataUrl })(req, res, next), async (req, res) => {
+  app.use('/mcp', (req, res, next) => requireBearerAuth({ verifier, expectedResource: resource, requiredScopes: ['documents:read'], resourceMetadataUrl: metadataUrl })(req, res, next));
+  app.get('/mcp', (_req, res) => res.set('Allow', 'POST').sendStatus(405));
+  app.post('/mcp', async (req, res) => {
     metrics.handled++;
     const principal = req.auth.extra.subject;
     const server = new McpServer({ name: 'documents-security-demo', version: '1.0.0' });
